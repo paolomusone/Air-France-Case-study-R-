@@ -1,0 +1,355 @@
+---
+title: 'A3: Team Project - Marketing SF'
+author: Team 12 - Yash Maradia, Khizer Sultan, Pablo Ramirez, Shimon Takahashi, Paolo
+  Musone
+date: "14/11/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+
+```{r data, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(readxl)
+datasets_marketing_campaign_SF_1_ <- read_excel("C:/Users/ramir/Desktop/MBA/HULT/Courses/MBAN/Data Science with R/datasets_marketing_campaign_SF (1).xlsx")
+View(datasets_marketing_campaign_SF_1_)
+sf <- datasets_marketing_campaign_SF_1_
+
+
+#install.packages("ggplot2")a
+
+#install.packages("plotly")
+
+library(ggplot2)
+library(plotly)
+
+```
+
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+#Exploring if there are any "NA" elements in the data set... 34 NA elements in the data set= 1,5% of the total data#
+is.na(sf)
+which(is.na(sf))
+
+#Cancel the 34 NA elements from the dataset.
+sf<-na.omit(sf)
+
+#Replace each variable from Education column to a numeric variable#
+sf$Education <- gsub("PhD","0", sf$Education)
+sf$Education <- gsub("Master","1", sf$Education)
+sf$Education <- gsub("Graduation", "2", sf$Education)
+sf$Education <- gsub("2n Cycle", "3", sf$Education)
+sf$Education <- gsub("Basic", "4", sf$Education)
+sf$Education <- as.numeric(sf$Education)
+print(sf$Education)
+
+#Replace each variable from Marital_Status  column to a numeric variable#
+sf$Marital_Status <- gsub("Widow", "0", sf$Marital_Status)
+sf$Marital_Status <- gsub("Single", "1", sf$Marital_Status)
+sf$Marital_Status <- gsub("Divorced", "2", sf$Marital_Status)
+sf$Marital_Status <- gsub("Married", "3", sf$Marital_Status)
+sf$Marital_Status <- gsub("Together", "4", sf$Marital_Status)
+sf$Marital_Status <- gsub("Alone", "5", sf$Marital_Status)
+sf$Marital_Status <- gsub("Absurd", "6", sf$Marital_Status)
+sf$Marital_Status <- gsub("YOLO", "7", sf$Marital_Status)
+sf$Marital_Status <- as.numeric(sf$Marital_Status)
+print(sf$Marital_Status)
+
+#Replace each variable from Country column to a numeric variable#
+sf$Country <- gsub("AUS", "0", sf$Country)
+sf$Country <- gsub("US", "1", sf$Country)
+sf$Country <- gsub("CA", "2", sf$Country)
+sf$Country <- gsub("GER", "3", sf$Country)
+sf$Country <- gsub("IND", "4", sf$Country)
+sf$Country <- gsub("ME", "5", sf$Country)
+sf$Country <- gsub("SA", "6", sf$Country)
+sf$Country <- gsub("SP", "7", sf$Country)
+sf$Country<- as.numeric(sf$Country)
+print(sf$Country)
+
+#Modifying dates#
+
+#Converting Dt_customer in as.date format
+sf$Dt_Customer<- as.Date(sf$Dt_Customer)
+
+#creating a "Today Variable" and converting in as.date format
+sf$Year_2014 <- c()
+for(i in 1:nrow(sf)){
+ sf$Year_2014[1] <-("2014-12-31") 
+}
+sf$Year_2014<-as.Date(sf$Year_2014)
+
+#Exploring the Age variable#
+summary(sf$Age)
+
+
+# Creating new variables #
+
+# Total purchases #
+sf$Total_Purchases<- sf$NumDealsPurchases+sf$NumWebPurchases+sf$NumCatalogPurchases+sf$NumStorePurchases
+
+# Customers Age #
+sf$Age<-2015 - sf$Year_Birth
+
+# How many days are the customers enrolled in the Retailer subscription #
+sf$days_of_Subscription<- (sf$Year_2014 - sf$Dt_Customer)
+
+```
+
+
+
+# Q1: The variables that drive Web purchases are: Income, Number of Web visits each month, Amount spent on Wines, Amount spend on Fish products and how many teens does the customer has, if any...
+```{r Part 1 - a, echo=FALSE, message=FALSE, warning=FALSE}
+############ Part 1 - a: Variables that impact most "NumWebPurchases" and CMO recommendations ###########
+# Q1: What variables drive Web purchases #
+# Total purchases #
+sf$Total_Purchases<- sf$NumDealsPurchases+sf$NumWebPurchases+sf$NumCatalogPurchases+sf$NumStorePurchases
+
+sf$Age<-2015 - sf$Year_Birth
+
+# How many days are the customers enrolled in the Retailer subscription #
+sf$days_of_Subscription<- (sf$Year_2014 - sf$Dt_Customer)
+
+# Creating new variables for regression purposes #
+sf$binary_Education <- c()
+for(i in 1: nrow(sf)){
+  if(sf$NumWebPurchases[i]>0 ){
+    sf$binary_Education[i]<-"1"
+  }else{
+    sf$binary_Education[i]<-"0"
+  }#closing my if statement 
+}# closing the i loop
+
+sf$binary_Education<-as.numeric(sf$binary_Education)
+
+sf$binary_Marital_Status <- c()
+for(i in 1: nrow(sf)){
+  if(sf$Marital_Status[i]==3 & 4){
+    sf$binary_Marital_Status[i] <- "1"
+  }else{
+    sf$binary_Marital_Status[i]<- "0"
+  }#closing my if statement
+}# closing the i loop
+sf$binary_Marital_Status<-as.numeric(sf$binary_Marital_Status)
+
+# Data Frame with all the numeric data#
+Numeric_data<- as.data.frame(sf[c( "binary_Education","binary_Marital_Status","Income","Kidhome","Teenhome","Recency","MntWines",
+                                   "MntFruits", "MntMeatProducts","MntFishProducts","MntSweetProducts","MntGoldProds", "NumDealsPurchases",
+                                   "NumCatalogPurchases","NumStorePurchases" ,"NumWebVisitsMonth","NumWebPurchases","AcceptedCmp3", "AcceptedCmp4" , "AcceptedCmp5",
+                                   "AcceptedCmp1", "AcceptedCmp2","Complain" , "Response" ,"Total_Purchases",
+                                   "Age","Z_CostContact","Z_Revenue")])
+
+
+#Train 80% of "Numeric_data" and test them with the outstanding 20% of the data#
+train_index <- sample(1:nrow(Numeric_data),size= 0.8*nrow(Numeric_data))
+sf_train <- Numeric_data[train_index,]
+sf_test <- Numeric_data[-train_index,]
+
+#Linear regression using the trained data#
+
+#The regression is clearly over fitted with unsignificant variables, which will be removed later to perform our linear regression analysis
+LR<-lm(NumWebPurchases~Income+Kidhome+Teenhome+Recency+MntWines+
+         MntFruits+ MntMeatProducts+MntFishProducts+MntSweetProducts+MntGoldProds+NumDealsPurchases+
+         NumCatalogPurchases+NumStorePurchases+NumWebVisitsMonth+AcceptedCmp3+ AcceptedCmp4+ AcceptedCmp5+
+         AcceptedCmp1+ AcceptedCmp2+Complain+Response+Total_Purchases+
+         Age+binary_Education+binary_Marital_Status, data=sf_train)
+summary(LR)
+
+LR_significant <- lm(NumWebPurchases~Income+Kidhome+Teenhome+MntWines+
+                      MntFishProducts+NumWebVisitsMonth, data=sf_train)
+summary(LR_significant)
+
+#Data Normalization
+min_max_norm <- function(Numeric_data) {
+  ( Numeric_data- min(Numeric_data)) / (max(Numeric_data) - min(Numeric_data))
+}
+
+#apply Min-Max normalization to the data set
+Normalized_data <- as.data.frame(lapply(Numeric_data, min_max_norm))
+
+train_index1 <- sample(1:nrow(Normalized_data),size= 0.8*nrow(Normalized_data))
+sf_train_norm <-Normalized_data[train_index,]
+sf_test_norm <- Normalized_data[-train_index,]
+
+#Linear Regression of Normalized data for comparing the estimated slopes among the significant variables#
+LR_significant_norm<-lm(NumWebPurchases~Income+Kidhome+Teenhome+MntWines+
+                           MntFishProducts+NumWebVisitsMonth, data=sf_train_norm)
+summary(LR_significant_norm)
+
+```
+
+# Part 1 - b: Only 11.52% of the data from Rest of the World (RoW) can be explained because of the purchases that people make in USA, which is not very significant / impactful on our data.
+
+```{r Part 1 - b, echo=FALSE, message=FALSE, warning=FALSE}
+#for usa
+sf$Usa_total_purchase <- c()
+for(i in 1: nrow(sf)){
+  
+  if(sf$Country[i]==1 ){
+    sf$Usa_total_purchase[i]<-sf$Total_Purchases[i]
+  }else{
+    sf$Usa_total_purchase[i]<- 0
+  }#closing my if statement 
+}# closing the i loop
+sum(sf$Usa_total_purchase)
+
+
+#for rest of the world
+sf$RoW_total_purchase <- c()
+for(i in 1: nrow(sf)){
+  
+  if(sf$Country[i] !=1 ){
+    sf$RoW_total_purchase[i]<-sf$Total_Purchases[i]
+  }else{
+    sf$RoW_total_purchase[i]<- 0
+  }#closing my if statement 
+}# closing the i loop
+sum(sf$RoW_total_purchase)
+
+train_index <- sample(1:nrow(sf), size=0.8*nrow(sf))
+
+SF_train_3 <- sf[train_index,]
+SF_test_3 <- sf[-train_index,]
+
+linear_model <- lm(Usa_total_purchase ~ RoW_total_purchase
+                   ,data=SF_train_3)
+
+summary(linear_model)
+
+linear_model_2 <- lm(Usa_total_purchase ~ RoW_total_purchase
+                     ,data=SF_test_3)
+
+summary(linear_model_2)
+
+cor(SF_train_3$Usa_total_purchase, SF_train_3$RoW_total_purchase)
+
+Usa_perCapita <- sum(sf$Usa_total_purchase)/sum(sf$Country==1)
+RoW_perCapita <- sum(sf$RoW_total_purchase)/sum(sf$Country==0)
+Usa_perCapita
+RoW_perCapita
+
+```
+
+# Part 1 - c: There is not enough evidence to confidently conclude that people who spend above the average amount on gold would have more store purchases.
+
+```{r Part 1 - c, echo=FALSE, message=FALSE, warning=FALSE}
+#Exploring the MntGoldProds data#
+hist(sf$MntGoldProds)
+#People spend an average of USD $43.96 in gold#
+Gold_Mean <- mean(sf$MntGoldProds)
+summary(sf$MntGoldProds)
+
+#Creating a Dummy variable for people who spend in Gold above USD $43.96 = "1" and below = "0"#
+sf$DummyGold_Above_Mean <- c()
+for(i in 1: nrow(sf)){
+  if(sf$MntGoldProds[i] > 43.96){
+    sf$DummyGold_Above_Mean[i] <- 1
+  }else{
+    sf$DummyGold_Above_Mean[i] <- 0
+  }#closing my if statement 
+}# closing the i loop
+sum(sf$DummyGold_Above_Mean)
+
+####### Logistic Regression: DummyGold_Above_Mean VS NumStorePurchases##########
+
+DummyGold_Above_Mean_VS_StorePurchases_logreg <- glm(DummyGold_Above_Mean~NumStorePurchases, data = sf, family = "binomial")
+summary(DummyGold_Above_Mean_VS_StorePurchases_logreg)
+
+####### Linear Regression: MntGoldProds VS NumStorePurchases ##########
+
+Gold_VS_StorePurchases_linear <- lm(MntGoldProds~NumStorePurchases, data=sf)
+summary(Gold_VS_StorePurchases_linear)
+
+plot(x = sf$MntGoldProds, y = sf$NumStorePurchases)
+
+```
+
+
+# Part 1 - d: There is a significant relation between married and PhD customers with amount spend on fish.  As we can see from the graph the number of people who are married and has a PhD degree are “good” and the rest others are “bad”.
+
+```{r Part 1 - d, echo=FALSE, message=FALSE, warning=FALSE}
+sf$Married_PhD<- c()
+for(i in 1: nrow(sf)){
+  if(sf$Marital_Status[i] == 3 & sf$Education[i] == 0){
+    sf$Married_PhD[i] <- "good"
+  }else{
+    sf$Married_PhD[i] <- "bad"
+  }#closing my if statement 
+}# closing the i loop
+
+linearMod <- lm(`MntFishProducts`~ .,
+                data = sf)
+summary(linearMod)
+
+linearMod2<-  lm(`MntFishProducts`~ sf$Married_PhD,
+                 data = sf)
+summary(linearMod2)
+
+library(ggplot2)
+
+ggplot(data=sf, aes(x=sf$`MntFishProducts`, y=sf$Married_PhD)) + geom_jitter()
+
+```
+
+# Q7 - Teenagers spend most on Wines... but Meat is the most consumed food #
+
+```{r Part 1 - e Q7, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Pie Chart with Percentages for families with teens product consumption# 
+slices <- c(325143, 20159, 110127, 27418, 21414, 45682)
+lbls <- c("Wine", "Fruit", "Meat", "Fish", "Sweet", "Gold")
+pct <- round(slices/sum(slices)*100)
+lbls <- paste(lbls, pct) # add percents to labels
+lbls <- paste(lbls,"%",sep="") # ad % to labels
+pie(slices,labels = lbls, col=rainbow(length(lbls)),
+    main="Product consumption by families with Teenagers")
+```
+
+# Q8 - Campaign #4 is the most successful, followed by campaign #3 and #5 which had very similar performance and results. 
+
+```{r Part 1 - e Q8, echo=FALSE, message=FALSE, warning=FALSE}
+
+#Most succesfull Campaign is determined by the sum of successes in each Campaign... "AcceptedCmp4" is the most succesfull with 164 successes (purchases)#
+Campaign1_successes <- sum(sf$AcceptedCmp1)
+Campaign2_successes <- sum(sf$AcceptedCmp2)
+Campaign3_successes <- sum(sf$AcceptedCmp3)
+Campaign4_successes <- sum(sf$AcceptedCmp4)
+Campaign5_successes <- sum(sf$AcceptedCmp5)
+
+#Most efficient Campaign is determined by dividing the amount of successes by total observations or attempts#
+sum(sf$AcceptedCmp1)/2240*100
+sum(sf$AcceptedCmp2)/2240*100
+sum(sf$AcceptedCmp3)/2240*100
+sum(sf$AcceptedCmp4)/2240*100
+sum(sf$AcceptedCmp5)/2240*100
+
+success <- c(sum(sf$AcceptedCmp1)/2240*100,
+             sum(sf$AcceptedCmp2)/2240*100,
+             sum(sf$AcceptedCmp3)/2240*100,
+             sum(sf$AcceptedCmp4)/2240*100,
+             sum(sf$AcceptedCmp5)/2240*100)
+
+campagins <- c(1,2,3,4,5)
+
+as.data.frame(success)
+as.data.frame(campagins)
+
+new_df <- cbind.data.frame(success,campagins)
+
+ggplot(data= new_df, aes(x= campagins,y = success))+
+  geom_bar(stat = "identity", fill = "#FF6666")
+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+
+```
